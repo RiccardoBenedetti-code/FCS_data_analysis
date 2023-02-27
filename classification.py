@@ -113,6 +113,7 @@ tprs = []
 # Loop for each trial
 for i in range(NUM_TRIALS):
     print("ITERATION:"+str(i))
+    np.random.seed(i)
     inner_cv = KFold(n_splits=5, shuffle=True, random_state=i)
     outer_cv = KFold(n_splits=5, shuffle=True, random_state=i)
     clf = GridSearchCV(estimator=svm, param_grid=p_grid, scoring='roc_auc', n_jobs=-1, refit=True, cv=inner_cv, verbose=0, return_train_score=True)
