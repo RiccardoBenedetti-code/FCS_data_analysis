@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 np.random.seed(1)
 list_datasets = os.listdir("DATASET_4_csv")
 
-patient_test_list = ["112314"]#,"112854","112405"]
+patient_test_list = ["112314","112854","112405","112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
 
 data_final = pd.DataFrame()
 
@@ -29,27 +29,6 @@ for i in range(len(patient_test_list)):
     ungated = pd.read_csv("DATASET_4_csv/"+patient_test+"_csv.csv", sep=";", decimal=",")
 
     g = gated.copy()
-    #ug = ungated.copy()
-
-    #df = ug.drop_duplicates().merge(g.drop_duplicates(), on=g.columns.to_list(), how='left', indicator=True)
-    #
-    #
-    #processed_df=df.loc[df._merge=='left_only',df.columns!='_merge']
-    #processed_df.reset_index(drop=True)
-    #processed_df = processed_df.sample(frac=1)
-    #print("Zero len:" + str(len(processed_df)))#
-    #
-    #list_of_ones = np.ones((len(g),1))
-    #list_of_zeros = np.zeros((len(processed_df),1))#
-    #
-    #processed_df['label'] = list_of_zeros
-    #g['label'] = list_of_ones
-    #
-    #data = pd.concat([processed_df,g], axis=0, ignore_index=True)
-    #data = data.sample(frac=1)
-    #
-    #X = data.loc[ : , data.columns != 'label']
-    #y = data['label']
 
     CD45 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD45_csv.csv", sep=";", decimal=",")
     CD3 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD3_csv.csv", sep=";", decimal=",")
@@ -81,14 +60,21 @@ for i in range(len(patient_test_list)):
     data = pd.concat([processed_df,g], axis=0, ignore_index=True)
     data = data.sample(frac=1)
     data_final = pd.concat([data_final,data], axis=0, ignore_index=True)
+    data_final = data_final.dropna(axis=1)
+    data_final = data_final.sample(frac=1)
 print(data_final)
+
+# Test con label messe a caso
+#random_labels = np.random.randint(2,size=len(data_final))
+#data_final['label'][:] = random_labels
+
 print("label 1:"+str(len(data_final[data_final['label']==1])))
 X = data_final.loc[ : , data_final.columns != 'label']
 y = data_final['label']
 X = X.drop(["Time"], axis=1)
 
-X = X.iloc[0:2000]
-y = y.iloc[0:2000]
+X = X.iloc[0:300]
+y = y.iloc[0:300]
 
 p_grid = {"C": [1, 10, 100], "gamma": [0.01, 0.1]}
 svm = SVC(kernel="linear")
