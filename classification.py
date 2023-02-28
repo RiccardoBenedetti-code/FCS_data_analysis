@@ -6,11 +6,13 @@ from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_
 from sklearn.metrics import make_scorer, recall_score, roc_curve, auc, roc_auc_score
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.manifold import TSNE
+from xgboost import XGBClassifier
 
 np.random.seed(1)
 list_datasets = os.listdir("DATASET_4_csv")
 
-patient_test_list = ["112314","112854","112405"]#,"112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
+patient_test_list = ["112314","112854","112405","112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
 
 data_final = pd.DataFrame()
 
@@ -82,7 +84,7 @@ for i in range(len(patient_test_list)):
 print(data_final)
 
 plt.figure()
-sns.scatterplot(data=data_final, x="FSC-A", y="CD45", hue="label")
+sns.scatterplot(data=data_final, x="SSC-A", y="CD45", hue="label")
 plt.savefig("data_exploration_"+experiment_name+".png", dpi=600)
 plt.close()
 
@@ -99,14 +101,53 @@ X = X.drop(["Time"], axis=1)
 # Seleziono un subset per le prove esplorative in modo da avere tempi di esecuzione ridotti
 select_subset = True
 if select_subset:
-    X = X.iloc[0:200]
-    y = y.iloc[0:200]
+    X = X.iloc[0:500]
+    y = y.iloc[0:500]
     print(X)
     print("label 1:"+str(len(y[y==1])))
 
+# Grafico TSNE per visualizzare i dati 
+tsne = TSNE(n_components=2, verbose=0, random_state=123)
+z = tsne.fit_transform(X) 
+df = pd.DataFrame()
+df["y"] = y
+df["comp-1"] = z[:,0]
+df["comp-2"] = z[:,1]
+
+plt.figure()
+sns.scatterplot(x="comp-1", y="comp-2", hue=df.y.tolist(),data=df)
+plt.title("TSNE for " + experiment_name + " experiment")
+plt.savefig("TSNE_"+experiment_name+".png", dpi=600)
+plt.close()
+
+##########################################################################################
+##########################################################################################
+##########################################################################################
+
+svm_model = True
+XGB_model = False
+
 # Inizializzo il modello e gli iperparamentri da esplorare all'interno della gridsearch
-p_grid = {"C": [1, 10, 100], "gamma": [0.01, 0.1]}
-svm = SVC(kernel="linear")
+# SVM
+if svm_model:
+    p_grid = {"C": [1, 10, 100], "gamma": [0.01, 0.1]}
+    model = SVC(kernel="linear")
+    model_name = "SVM"
+
+# XGBoost
+if XGB_model:
+    p_grid = {  "gamma":[0, 0.1, 0.2,0.3,0.4,0.5],
+                "max_depth": [3,5,10],
+                "n_estimators":[5,10, 20, 100],
+                "ubsample": [0.25, 0.5, 1],
+                "verbosity": [0]
+            },
+    model = XGBClassifier(use_label_encoder=False,silent=True)
+    model_name = "XGB"
+
+###########################################################################################
+###########################################################################################
+###########################################################################################
 
 # Setto il numero di fold per la crossvalidazione annidata e il numero di iterazioni per tenere sotto controllo l'overfitting
 num_splits = 5
@@ -141,7 +182,7 @@ for i in range(NUM_TRIALS):
 
     # ESECUZIONE DELLA CROSSVALIDAZIONE ANNIDATA
     # Il classificatore è una gridserch che crossvalida sul ciclo interno 
-    clf = GridSearchCV(estimator=svm, param_grid=p_grid, scoring='roc_auc', n_jobs=-1, refit=True, cv=inner_cv, verbose=0, return_train_score=True)
+    clf = GridSearchCV(estimator=model, param_grid=p_grid, scoring='roc_auc', n_jobs=-1, refit=True, cv=inner_cv, verbose=0, return_train_score=True)
     # Il classificatore viene crossvalidato nel ciclo esterno
     nested_score = cross_validate(clf, X=X, y=y, cv=outer_cv, return_train_score=True, return_estimator=True, scoring=myscoring)
     # Salvo nei vettori perogni iterazione i valori medi tra i vari fold degli score ottenuti in train e test set durante la crossvalidazione e li stampo a video
@@ -207,7 +248,7 @@ for i in range(NUM_TRIALS):
     plt.legend(loc="lower right")
     #plt.axis('square')
     #plt.savefig(dir_name + "/img/"+model_name+"_ROCcurve" + str(int(float(sw))) + ".png", dpi=600)
-    plt.savefig("ROCcurve_"+experiment_name+".png", dpi=600)
+    plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+".png", dpi=600)
     plt.close()
 
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
