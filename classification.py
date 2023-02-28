@@ -33,15 +33,30 @@ for i in range(len(patient_test_list)):
     CD3 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD3_csv.csv", sep=";", decimal=",")
     CD19 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD19_csv.csv", sep=";", decimal=",")
 
-    # Considero le righe di CD45 che sono compaiono anche in CD3
-    df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
-    df_CD3_from_CD45=df.loc[df._merge=='both',df.columns!='_merge']
+    linfT = True
+    linfB = False
 
-    # Considero le righe di CD3 che non compaiono in CD19
-    df = df_CD3_from_CD45.drop_duplicates().merge(CD19.drop_duplicates(), on=CD19.columns.to_list(), how='left', indicator=True)
-    df_CD19_CD3_from_CD45 = df.loc[df._merge=='left_only',df.columns!='_merge']
+    if linfT:
+        # Considero le righe di CD45 che sono compaiono anche in CD3
+        df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
+        df_CD3_from_CD45=df.loc[df._merge=='both',df.columns!='_merge']
 
-    g = df_CD19_CD3_from_CD45.copy()
+        # Considero le righe che compaiono sia in CD45 che in CD3 ma che non compaiono in CD19
+        df = df_CD3_from_CD45.drop_duplicates().merge(CD19.drop_duplicates(), on=CD19.columns.to_list(), how='left', indicator=True)
+        df_CD19_CD3_from_CD45 = df.loc[df._merge=='left_only',df.columns!='_merge']
+
+        g = df_CD19_CD3_from_CD45.copy()
+    elif linfB:
+        # Considero le righe di CD45 che non compaiono anche in CD3
+        df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
+        df_CD3_from_CD45=df.loc[df._merge=='left_only',df.columns!='_merge']
+
+        # Considero le righe di CD45 che non compaiono anche in CD3 ma che compaiono in CD19
+        df = df_CD3_from_CD45.drop_duplicates().merge(CD19.drop_duplicates(), on=CD19.columns.to_list(), how='left', indicator=True)
+        df_CD19_CD3_from_CD45 = df.loc[df._merge=='both',df.columns!='_merge']
+
+        g = df_CD19_CD3_from_CD45.copy()
+
     ug = ungated.copy()
 
     df = ug.drop_duplicates().merge(g.drop_duplicates(), on=g.columns.to_list(), how='left', indicator=True)
@@ -64,8 +79,8 @@ for i in range(len(patient_test_list)):
 print(data_final)
 
 # Test con label randomiche
-random_labels = np.random.randint(2,size=len(data_final))
-data_final['label'][:] = random_labels
+#random_labels = np.random.randint(2,size=len(data_final))
+#data_final['label'][:] = random_labels
 
 print("label 1:"+str(len(data_final[data_final['label']==1])))
 X = data_final.loc[ : , data_final.columns != 'label']
@@ -73,8 +88,8 @@ y = data_final['label']
 X = X.drop(["Time"], axis=1)
 
 # Seleziono un subset per le prove esplorative in modo da avere tempi di esecuzione ridotti
-X = X.iloc[0:500]
-y = y.iloc[0:500]
+X = X.iloc[0:100]
+y = y.iloc[0:100]
 print(X)
 
 # Inizializzo il modello e gli iperparamentri da esplorare all'interno della gridsearch
