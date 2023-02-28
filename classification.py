@@ -4,7 +4,6 @@ import os
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_test_split, cross_validate
 from sklearn.metrics import make_scorer, recall_score, roc_curve, auc, roc_auc_score
-from sklearn.pipeline import Pipeline
 import matplotlib.pyplot as plt
 
 np.random.seed(1)
@@ -64,29 +63,37 @@ for i in range(len(patient_test_list)):
     data_final = data_final.sample(frac=1)
 print(data_final)
 
-# Test con label messe a caso
-#random_labels = np.random.randint(2,size=len(data_final))
-#data_final['label'][:] = random_labels
+# Test con label randomiche
+random_labels = np.random.randint(2,size=len(data_final))
+data_final['label'][:] = random_labels
 
 print("label 1:"+str(len(data_final[data_final['label']==1])))
 X = data_final.loc[ : , data_final.columns != 'label']
 y = data_final['label']
 X = X.drop(["Time"], axis=1)
 
-X = X.iloc[0:300]
-y = y.iloc[0:300]
+# Seleziono un subset per le prove esplorative in modo da avere tempi di esecuzione ridotti
+X = X.iloc[0:500]
+y = y.iloc[0:500]
+print(X)
 
+# Inizializzo il modello e gli iperparamentri da esplorare all'interno della gridsearch
 p_grid = {"C": [1, 10, 100], "gamma": [0.01, 0.1]}
 svm = SVC(kernel="linear")
+
+# Setto il numero di fold per la crossvalidazione annidata e il numero di iterazioni per tenere sotto controllo l'overfitting
+num_splits = 5
 NUM_TRIALS = 5
 nested_scores = np.zeros(NUM_TRIALS)
 
+# Setto le tipologie di score di interesse per l'esperimento, avremo poi queste informazioni in uscita dalla crossvalidazione annidata
 myscoring = {'bal_acc': 'balanced_accuracy',
                         'roc_auc': 'roc_auc',
                         'ave_pre': 'average_precision',
                         'sensitivity': 'recall'
                         }
 
+# Inizializzo i vettori contenenti i risultati in termini di score della crossvalidazione annidata per training e test 
 bal_acc_train_scores = np.zeros((NUM_TRIALS,1))
 roc_auc_train_scores = np.zeros((NUM_TRIALS,1))
 ave_pre_train_scores = np.zeros((NUM_TRIALS,1))
@@ -96,14 +103,20 @@ ave_pre_test_scores = np.zeros((NUM_TRIALS,1))
 mean_fpr = np.linspace(0, 1, 1000)
 tprs = []
 
-# Loop for each trial
+# Eseguo il loop per ogni iterazione 
 for i in range(NUM_TRIALS):
     print("ITERATION:"+str(i))
     np.random.seed(i)
-    inner_cv = KFold(n_splits=5, shuffle=True, random_state=i)
-    outer_cv = KFold(n_splits=5, shuffle=True, random_state=i)
+    # Definisco il ciclo interno ed esterno della crossvalidazione annidata
+    inner_cv = KFold(n_splits=num_splits, shuffle=True, random_state=i)
+    outer_cv = KFold(n_splits=num_splits, shuffle=True, random_state=i)
+
+    # ESECUZIONE DELLA CROSSVALIDAZIONE ANNIDATA
+    # Il classificatore è una gridserch che crossvalida sul ciclo interno 
     clf = GridSearchCV(estimator=svm, param_grid=p_grid, scoring='roc_auc', n_jobs=-1, refit=True, cv=inner_cv, verbose=0, return_train_score=True)
+    # Il classificatore viene crossvalidato nel ciclo esterno
     nested_score = cross_validate(clf, X=X, y=y, cv=outer_cv, return_train_score=True, return_estimator=True, scoring=myscoring)
+    # Salvo nei vettori perogni iterazione i valori medi tra i vari fold degli score ottenuti in train e test set durante la crossvalidazione e li stampo a video
     bal_acc_train_scores[i] = np.mean(nested_score['train_bal_acc'])
     roc_auc_train_scores[i] = np.mean(nested_score['train_roc_auc'])
     ave_pre_train_scores[i] = np.mean(nested_score['train_ave_pre'])
@@ -116,12 +129,12 @@ for i in range(NUM_TRIALS):
     print('Test: bal_acc ' + str( bal_acc_test_scores[i]))
     print('Test: roc_auc ' + str(roc_auc_test_scores[i]))
     print('Test: ave_pre ' + str(ave_pre_test_scores[i]))
-    j = 0
 
+    # TRUE POSITIVE RATE COMPUTATION FOR EACH OUTER LOOP (TEST SET)
+    j = 0
     for train_index, test_index in inner_cv.split(X, y):
         print("Split:", j)
-            
-        ## TRUE POSITIVE RATE COMPUTATION FOR EACH OUTER LOOP (TEST SET)
+
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
