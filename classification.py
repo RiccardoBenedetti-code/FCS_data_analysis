@@ -5,11 +5,12 @@ from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_test_split, cross_validate
 from sklearn.metrics import make_scorer, recall_score, roc_curve, auc, roc_auc_score
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 np.random.seed(1)
 list_datasets = os.listdir("DATASET_4_csv")
 
-patient_test_list = ["112314","112854","112405","112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
+patient_test_list = ["112314","112854","112405"]#,"112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
 
 data_final = pd.DataFrame()
 
@@ -23,11 +24,11 @@ for i in range(len(patient_test_list)):
 
     print(patient_test)
 
-    gated = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD45_csv.csv", sep=";", decimal=",")
+    #gated = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD45_csv.csv", sep=";", decimal=",")
 
     ungated = pd.read_csv("DATASET_4_csv/"+patient_test+"_csv.csv", sep=";", decimal=",")
 
-    g = gated.copy()
+    #g = gated.copy()
 
     CD45 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD45_csv.csv", sep=";", decimal=",")
     CD3 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD3_csv.csv", sep=";", decimal=",")
@@ -37,6 +38,7 @@ for i in range(len(patient_test_list)):
     linfB = False
 
     if linfT:
+        experiment_name = "Lynfocytes_T"
         # Considero le righe di CD45 che sono compaiono anche in CD3
         df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
         df_CD3_from_CD45=df.loc[df._merge=='both',df.columns!='_merge']
@@ -47,6 +49,7 @@ for i in range(len(patient_test_list)):
 
         g = df_CD19_CD3_from_CD45.copy()
     elif linfB:
+        experiment_name = "Lymphocytes_B"
         # Considero le righe di CD45 che non compaiono anche in CD3
         df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
         df_CD3_from_CD45=df.loc[df._merge=='left_only',df.columns!='_merge']
@@ -78,9 +81,15 @@ for i in range(len(patient_test_list)):
     data_final = data_final.sample(frac=1)
 print(data_final)
 
-# Test con label randomiche
-#random_labels = np.random.randint(2,size=len(data_final))
-#data_final['label'][:] = random_labels
+plt.figure()
+sns.scatterplot(data=data_final, x="FSC-A", y="CD45", hue="label")
+plt.savefig("data_exploration_"+experiment_name+".png", dpi=600)
+plt.close()
+
+random_labels = False
+if random_labels:
+    random_labels = np.random.randint(2,size=len(data_final))
+    data_final['label'][:] = random_labels
 
 print("label 1:"+str(len(data_final[data_final['label']==1])))
 X = data_final.loc[ : , data_final.columns != 'label']
@@ -88,9 +97,12 @@ y = data_final['label']
 X = X.drop(["Time"], axis=1)
 
 # Seleziono un subset per le prove esplorative in modo da avere tempi di esecuzione ridotti
-X = X.iloc[0:100]
-y = y.iloc[0:100]
-print(X)
+select_subset = True
+if select_subset:
+    X = X.iloc[0:200]
+    y = y.iloc[0:200]
+    print(X)
+    print("label 1:"+str(len(y[y==1])))
 
 # Inizializzo il modello e gli iperparamentri da esplorare all'interno della gridsearch
 p_grid = {"C": [1, 10, 100], "gamma": [0.01, 0.1]}
@@ -118,6 +130,7 @@ ave_pre_test_scores = np.zeros((NUM_TRIALS,1))
 mean_fpr = np.linspace(0, 1, 1000)
 tprs = []
 
+print(experiment_name)
 # Eseguo il loop per ogni iterazione 
 for i in range(NUM_TRIALS):
     print("ITERATION:"+str(i))
@@ -194,7 +207,7 @@ for i in range(NUM_TRIALS):
     plt.legend(loc="lower right")
     #plt.axis('square')
     #plt.savefig(dir_name + "/img/"+model_name+"_ROCcurve" + str(int(float(sw))) + ".png", dpi=600)
-    plt.savefig("ROCcurve.png", dpi=600)
+    plt.savefig("ROCcurve_"+experiment_name+".png", dpi=600)
     plt.close()
 
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
