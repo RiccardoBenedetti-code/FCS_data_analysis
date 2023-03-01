@@ -10,6 +10,16 @@ import seaborn as sns
 from sklearn.manifold import TSNE
 from xgboost import XGBClassifier
 
+# Flags selection
+random_labels = False
+select_subset = True
+tsne_generator = True
+
+# Model selection
+svm_model = False
+XGB_model = True
+tree_model = False
+
 np.random.seed(1)
 list_datasets = os.listdir("DATASET_4_csv")
 
@@ -89,7 +99,6 @@ sns.scatterplot(data=data_final, x="SSC-A", y="CD45", hue="label")
 plt.savefig("data_exploration_"+experiment_name+".png", dpi=600)
 plt.close()
 
-random_labels = False
 if random_labels:
     random_labels = np.random.randint(2,size=len(data_final))
     data_final['label'][:] = random_labels
@@ -100,7 +109,6 @@ y = data_final['label']
 X = X.drop(["Time"], axis=1)
 
 # Seleziono un subset per le prove esplorative in modo da avere tempi di esecuzione ridotti
-select_subset = True
 if select_subset:
     X = X.iloc[0:1000]
     y = y.iloc[0:1000]
@@ -108,7 +116,6 @@ if select_subset:
     print("label 1:"+str(len(y[y==1])))
 
 # Grafico TSNE per visualizzare i dati 
-tsne_generator = False
 if tsne_generator:
     tsne = TSNE(n_components=2, verbose=0, random_state=123)
     z = tsne.fit_transform(X) 
@@ -126,10 +133,6 @@ if tsne_generator:
 ##########################################################################################
 ##########################################################################################
 ##########################################################################################
-
-svm_model = False
-XGB_model = True
-tree_model = False
 
 # Inizializzo il modello e gli iperparamentri da esplorare all'interno della gridsearch
 # SVM
