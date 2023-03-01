@@ -14,6 +14,7 @@ from xgboost import XGBClassifier
 random_labels = False
 select_subset = True
 tsne_generator = True
+leave_30_out = True
 
 # Model selection
 svm_model = False
@@ -131,7 +132,8 @@ if tsne_generator:
     plt.close()
 
 # Lascio fuori un 30% di dati per test successivo su modello finale
-X, X_test_final, y, y_test_final = train_test_split(X, y, test_size=0.33, random_state=1)
+if leave_30_out:
+    X, X_test_final, y, y_test_final = train_test_split(X, y, test_size=0.33, random_state=1)
 
 ##########################################################################################
 ##########################################################################################
@@ -278,29 +280,30 @@ clf_final.fit(X,y)
 best_model = clf_final.best_estimator_
 print("Best final estimator:")
 print(best_model)
-# Eseguo la predizione sui dati tenuti fuori prima della crossvalidazione annidata
-y_final_pred_labels = best_model.predict(X_test_final)
-# Calcolo false positive rate e true positive rate per la roc dando come argomento le label vere e quelle predette dal modello appena trainato
-fpr, tpr, thresholds = roc_curve(y_test_final, y_final_pred_labels)
-# Calcoli per il plotting della roc
-roc_auc = auc(fpr, tpr)
-print("roc_auc final model: " + str(np.round(roc_auc,3)))
-interp_tpr = np.interp(mean_fpr, fpr, tpr)
-interp_tpr[0] = 0.0
-plt.figure()
-plt.plot([0, 1], [0, 1], '--', color='r', label='Random classifier', lw=2, alpha=0.8)
-interp_tpr[-1] = 1.0
-roc_auc = auc(mean_fpr, interp_tpr)
-plt.title('Final Classifier AUC=%0.3f' % roc_auc)
-plt.plot(mean_fpr, interp_tpr, color='b', label='Mean ROC', lw=2, alpha=0.8)
+if leave_30_out:
+    # Eseguo la predizione sui dati tenuti fuori prima della crossvalidazione annidata
+    y_final_pred_labels = best_model.predict(X_test_final)
+    # Calcolo false positive rate e true positive rate per la roc dando come argomento le label vere e quelle predette dal modello appena trainato
+    fpr, tpr, thresholds = roc_curve(y_test_final, y_final_pred_labels)
+    # Calcoli per il plotting della roc
+    roc_auc = auc(fpr, tpr)
+    print("roc_auc final model: " + str(np.round(roc_auc,3)))
+    interp_tpr = np.interp(mean_fpr, fpr, tpr)
+    interp_tpr[0] = 0.0
+    plt.figure()
+    plt.plot([0, 1], [0, 1], '--', color='r', label='Random classifier', lw=2, alpha=0.8)
+    interp_tpr[-1] = 1.0
+    roc_auc = auc(mean_fpr, interp_tpr)
+    plt.title('Final Classifier AUC=%0.3f' % roc_auc)
+    plt.plot(mean_fpr, interp_tpr, color='b', label='Mean ROC', lw=2, alpha=0.8)
 
-plt.xlim([-0.05, 1.05])
-plt.ylim([-0.05, 1.05])
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.legend(loc="lower right")
-plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+"_final_classificator.png", dpi=600)
-plt.close()
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.legend(loc="lower right")
+    plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+"_final_classificator.png", dpi=600)
+    plt.close()
 
 
 
