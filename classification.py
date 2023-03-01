@@ -17,8 +17,8 @@ tsne_generator = True
 
 # Model selection
 svm_model = False
-XGB_model = True
-tree_model = False
+XGB_model = False
+tree_model = True
 
 np.random.seed(1)
 list_datasets = os.listdir("DATASET_4_csv")
@@ -129,6 +129,9 @@ if tsne_generator:
     plt.title("TSNE for " + experiment_name + " experiment")
     plt.savefig("TSNE_"+experiment_name+".png", dpi=600)
     plt.close()
+
+# Lascio fuori un 30% di dati per test successivo su modello finale
+X, X_test_final, y, y_test_final = train_test_split(X, y, test_size=0.33, random_state=1)
 
 ##########################################################################################
 ##########################################################################################
@@ -241,7 +244,7 @@ for i in range(NUM_TRIALS):
     mean_tpr = np.mean(tprs, axis=0)
     mean_tpr[-1] = 1.0
     mean_auc = auc(mean_fpr, mean_tpr)
-    plt.title('AUC=%0.3f' % mean_auc)
+    plt.title('Mean AUC=%0.3f' % mean_auc)
     plt.plot(mean_fpr, mean_tpr, color='b', label='Mean ROC', lw=2, alpha=0.8)
 
     ## Standard deviation computation
@@ -262,16 +265,45 @@ for i in range(NUM_TRIALS):
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
     plt.legend(loc="lower right")
-    #plt.axis('square')
-    #plt.savefig(dir_name + "/img/"+model_name+"_ROCcurve" + str(int(float(sw))) + ".png", dpi=600)
     plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+".png", dpi=600)
     plt.close()
 
 # FINAL MODEL
 print("Training final classifier...")
+# Definisco la gridsearch per il modello finale, prendo gli stessi parametri del loop interno della crossvalidazione annidata
 clf_final = GridSearchCV(estimator=model, param_grid=p_grid, scoring='roc_auc', n_jobs=-1, refit=True, cv=inner_cv, verbose=0, return_train_score=True)
+# Fitto il modello sui dati che abbiamo usato per la crossvalidazione annidata
 clf_final.fit(X,y)
-best_clf_final = clf_final.best_estimator_
+# Estraggo il modello migliore tra quelli valutati con la gridsearch precedente
+best_model = clf_final.best_estimator_
+print("Best final estimator:")
+print(best_model)
+# Eseguo la predizione sui dati tenuti fuori prima della crossvalidazione annidata
+y_final_pred_labels = best_model.predict(X_test_final)
+# Calcolo false positive rate e true positive rate per la roc dando come argomento le label vere e quelle predette dal modello appena trainato
+fpr, tpr, thresholds = roc_curve(y_test_final, y_final_pred_labels)
+# Calcoli per il plotting della roc
+roc_auc = auc(fpr, tpr)
+print("roc_auc final model: " + str(np.round(roc_auc,3)))
+interp_tpr = np.interp(mean_fpr, fpr, tpr)
+interp_tpr[0] = 0.0
+plt.figure()
+plt.plot([0, 1], [0, 1], '--', color='r', label='Random classifier', lw=2, alpha=0.8)
+interp_tpr[-1] = 1.0
+roc_auc = auc(mean_fpr, interp_tpr)
+plt.title('Final Classifier AUC=%0.3f' % roc_auc)
+plt.plot(mean_fpr, interp_tpr, color='b', label='Mean ROC', lw=2, alpha=0.8)
+
+plt.xlim([-0.05, 1.05])
+plt.ylim([-0.05, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.legend(loc="lower right")
+plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+"_final_classificator.png", dpi=600)
+plt.close()
+
+
+
 
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
 #clf = SVC(kernel='linear', C=1).fit(X_train, y_train)
