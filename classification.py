@@ -4,6 +4,7 @@ import os
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_test_split, cross_validate
 from sklearn.metrics import make_scorer, recall_score, roc_curve, auc, roc_auc_score
+from sklearn import tree
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.manifold import TSNE
@@ -12,7 +13,7 @@ from xgboost import XGBClassifier
 np.random.seed(1)
 list_datasets = os.listdir("DATASET_4_csv")
 
-patient_test_list = ["112314","112854","112405","112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
+patient_test_list = ["112314","112854","112405"]#,"112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
 
 data_final = pd.DataFrame()
 
@@ -124,8 +125,9 @@ plt.close()
 ##########################################################################################
 ##########################################################################################
 
-svm_model = True
+svm_model = False
 XGB_model = False
+tree_model = True
 
 # Inizializzo il modello e gli iperparamentri da esplorare all'interno della gridsearch
 # SVM
@@ -141,9 +143,18 @@ if XGB_model:
                 "n_estimators":[5,10, 20, 100],
                 "ubsample": [0.25, 0.5, 1],
                 "verbosity": [0]
-            },
+            }
     model = XGBClassifier(use_label_encoder=False,silent=True)
     model_name = "XGB"
+
+# Decision Tree
+if tree_model:
+    p_grid = {  "criterion":['gini','entropy'],
+                "max_depth":[2,4,6,8,10,12]
+
+             }
+    model = tree.DecisionTreeClassifier()
+    model_name = "DecisionTree"
 
 ###########################################################################################
 ###########################################################################################
