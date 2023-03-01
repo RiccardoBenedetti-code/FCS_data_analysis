@@ -13,7 +13,7 @@ from xgboost import XGBClassifier
 np.random.seed(1)
 list_datasets = os.listdir("DATASET_4_csv")
 
-patient_test_list = ["112314","112854","112405"]#,"112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
+patient_test_list = ["112314","112854","112405","112458","112467","112675","112684","112797","112854","112863","112962","112998","113199"]
 
 data_final = pd.DataFrame()
 
@@ -102,32 +102,34 @@ X = X.drop(["Time"], axis=1)
 # Seleziono un subset per le prove esplorative in modo da avere tempi di esecuzione ridotti
 select_subset = True
 if select_subset:
-    X = X.iloc[0:500]
-    y = y.iloc[0:500]
+    X = X.iloc[0:1000]
+    y = y.iloc[0:1000]
     print(X)
     print("label 1:"+str(len(y[y==1])))
 
 # Grafico TSNE per visualizzare i dati 
-tsne = TSNE(n_components=2, verbose=0, random_state=123)
-z = tsne.fit_transform(X) 
-df = pd.DataFrame()
-df["y"] = y
-df["comp-1"] = z[:,0]
-df["comp-2"] = z[:,1]
+tsne_generator = False
+if tsne_generator:
+    tsne = TSNE(n_components=2, verbose=0, random_state=123)
+    z = tsne.fit_transform(X) 
+    df = pd.DataFrame()
+    df["y"] = y
+    df["comp-1"] = z[:,0]
+    df["comp-2"] = z[:,1]
 
-plt.figure()
-sns.scatterplot(x="comp-1", y="comp-2", hue=df.y.tolist(),data=df)
-plt.title("TSNE for " + experiment_name + " experiment")
-plt.savefig("TSNE_"+experiment_name+".png", dpi=600)
-plt.close()
+    plt.figure()
+    sns.scatterplot(x="comp-1", y="comp-2", hue=df.y.tolist(),data=df)
+    plt.title("TSNE for " + experiment_name + " experiment")
+    plt.savefig("TSNE_"+experiment_name+".png", dpi=600)
+    plt.close()
 
 ##########################################################################################
 ##########################################################################################
 ##########################################################################################
 
 svm_model = False
-XGB_model = False
-tree_model = True
+XGB_model = True
+tree_model = False
 
 # Inizializzo il modello e gli iperparamentri da esplorare all'interno della gridsearch
 # SVM
@@ -261,6 +263,12 @@ for i in range(NUM_TRIALS):
     #plt.savefig(dir_name + "/img/"+model_name+"_ROCcurve" + str(int(float(sw))) + ".png", dpi=600)
     plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+".png", dpi=600)
     plt.close()
+
+# FINAL MODEL
+print("Training final classifier...")
+clf_final = GridSearchCV(estimator=model, param_grid=p_grid, scoring='roc_auc', n_jobs=-1, refit=True, cv=inner_cv, verbose=0, return_train_score=True)
+clf_final.fit(X,y)
+best_clf_final = clf_final.best_estimator_
 
 #X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
 #clf = SVC(kernel='linear', C=1).fit(X_train, y_train)
