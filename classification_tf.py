@@ -153,7 +153,7 @@ model = Sequential()
 model.add(Dense(12, activation='relu'))
 model.add(Dense(8, activation='relu'))
 model.add(Dense(2, activation='sigmoid')) 
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', metrics.AUC(name='auc', curve='ROC', num_thresholds=1000)],)  
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', metrics.AUC(name='auc', curve='ROC', num_thresholds=1000)])  
 
 for i in range(NUM_TRIALS):
     print("ITERATION:" + str(i))
@@ -163,7 +163,7 @@ for i in range(NUM_TRIALS):
     fold = 0
     for train_index, test_index in cv.split(X,y):
 
-        print("Iteration:" + str(fold))
+        print("Fold:" + str(fold))
 
         train_ds = X.iloc[train_index]
         test_ds = X.iloc[test_index]
@@ -177,10 +177,11 @@ for i in range(NUM_TRIALS):
         predict_labels = model.predict(test_ds, verbose=0)
 
         fpr_keras, tpr_keras, thresholds_keras_p_fold = roc_curve(test_labels[:,1], predict_labels[:,1])
-        auc_keras = auc(fpr_keras, tpr_keras)
         interp_tpr_keras = np.interp(interp_fpr, fpr_keras, tpr_keras)
         interp_tpr_keras[0] = 0
         interp_tpr_keras[-1] = 1
+        auc_keras = auc(interp_fpr, interp_tpr_keras)
+        print('ROC AUC=%0.3f' % auc_keras)
         tprs.append(interp_tpr_keras)
 
         fold += 1
@@ -195,6 +196,27 @@ plt.title('Mean AUC=%0.3f' % mean_auc)
 plt.legend(['Mean ROC', 'Random Classifier'])
 plt.savefig("ROCcurve_"+experiment_name+"_keras.png", dpi=600)
 plt.close()
+
+# Train final classifier final classifier
+y = to_categorical(y, num_classes=2)
+y_test_final = to_categorical(y_test_final, num_classes=2)
+model.fit(X,y,epochs=100, batch_size=10, validation_split=0, shuffle=False, verbose=0)
+predict_labels = model.predict(X_test_final, verbose=0)
+fpr_keras, tpr_keras, thresholds_keras_p_fold = roc_curve(y_test_final[:,1], predict_labels[:,1])
+interp_tpr_keras = np.interp(interp_fpr, fpr_keras, tpr_keras)
+interp_tpr_keras[0] = 0
+interp_tpr_keras[-1] = 1
+plt.figure()
+plt.plot(interp_fpr,interp_tpr_keras,'b')
+mean_auc = auc(interp_fpr, interp_tpr_keras)
+dummy_classifier = [0,1]
+plt.plot(dummy_classifier,dummy_classifier,'r--')
+plt.title('Mean AUC=%0.3f' % mean_auc)
+plt.legend(['Mean ROC', 'Random Classifier'])
+plt.savefig("ROCcurve_"+experiment_name+"_keras_Final_Classifier.png", dpi=600)
+plt.close()
+
+
 
 
 
