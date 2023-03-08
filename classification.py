@@ -47,9 +47,12 @@ for i in range(len(patient_test_list)):
     CD45 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD45_csv.csv", sep=";", decimal=",")
     CD3 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD3_csv.csv", sep=";", decimal=",")
     CD19 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD19_csv.csv", sep=";", decimal=",")
+    CD8 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD8_csv.csv", sep=";", decimal=",")
+    CD4 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD4_csv.csv", sep=";", decimal=",")
 
-    linfT = True
+    linfT = False
     linfB = False
+    linfTtox = True
 
     if linfT:
         experiment_name = "Lynfocytes_T"
@@ -73,6 +76,21 @@ for i in range(len(patient_test_list)):
         df_CD19_CD3_from_CD45 = df.loc[df._merge=='both',df.columns!='_merge']
 
         g = df_CD19_CD3_from_CD45.copy()
+    if linfTtox:
+        experiment_name = "Lynfocytes_T_cytotox"
+        # Considero le righe di CD45 che sono compaiono anche in CD3
+        df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
+        df_CD3_from_CD45=df.loc[df._merge=='both',df.columns!='_merge']
+
+        # Considero le righe che compaiono in CD45, in CD3 e in CD8
+        df = df_CD3_from_CD45.drop_duplicates().merge(CD8.drop_duplicates(), on=CD8.columns.to_list(), how='left', indicator=True)
+        df_CD8_CD3_from_CD45 = df.loc[df._merge=='both',df.columns!='_merge']
+
+        # Considero le righe che compaiono in CD45, in CD3 e in CD8 ma non in CD4
+        df = df_CD8_CD3_from_CD45.drop_duplicates().merge(CD4.drop_duplicates(), on=CD4.columns.to_list(), how='left', indicator=True)
+        df_CD4_CD8_CD3_from_CD45 = df.loc[df._merge=='left_only',df.columns!='_merge']
+
+        g = df_CD4_CD8_CD3_from_CD45.copy()
 
     ug = ungated.copy()
 
@@ -154,7 +172,7 @@ if XGB_model:
                 "ubsample": [0.25, 0.5, 1],
                 "verbosity": [0]
             }
-    model = XGBClassifier(use_label_encoder=False,silent=True)
+    model = XGBClassifier(silent=True)
     model_name = "XGB"
 
 # Decision Tree

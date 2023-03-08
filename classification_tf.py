@@ -48,9 +48,12 @@ for i in range(len(patient_test_list)):
     CD45 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD45_csv.csv", sep=";", decimal=",")
     CD3 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD3_csv.csv", sep=";", decimal=",")
     CD19 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD19_csv.csv", sep=";", decimal=",")
+    CD8 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD8_csv.csv", sep=";", decimal=",")
+    CD4 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD4_csv.csv", sep=";", decimal=",")
 
-    linfT = True
+    linfT = False
     linfB = False
+    linfTtox = True
 
     if linfT:
         experiment_name = "Lynfocytes_T"
@@ -74,6 +77,21 @@ for i in range(len(patient_test_list)):
         df_CD19_CD3_from_CD45 = df.loc[df._merge=='both',df.columns!='_merge']
 
         g = df_CD19_CD3_from_CD45.copy()
+    if linfTtox:
+        experiment_name = "Lynfocytes_T_cytotox"
+        # Considero le righe di CD45 che sono compaiono anche in CD3
+        df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
+        df_CD3_from_CD45=df.loc[df._merge=='both',df.columns!='_merge']
+
+        # Considero le righe che compaiono in CD45, in CD3 e in CD8
+        df = df_CD3_from_CD45.drop_duplicates().merge(CD8.drop_duplicates(), on=CD8.columns.to_list(), how='left', indicator=True)
+        df_CD8_CD3_from_CD45 = df.loc[df._merge=='both',df.columns!='_merge']
+
+        # Considero le righe che compaiono in CD45, in CD3 e in CD8 ma non in CD4
+        df = df_CD8_CD3_from_CD45.drop_duplicates().merge(CD4.drop_duplicates(), on=CD4.columns.to_list(), how='left', indicator=True)
+        df_CD4_CD8_CD3_from_CD45 = df.loc[df._merge=='left_only',df.columns!='_merge']
+
+        g = df_CD4_CD8_CD3_from_CD45.copy()
 
     ug = ungated.copy()
 
@@ -147,14 +165,6 @@ print(experiment_name)
 tprs = []
 interp_fpr = np.linspace(0,1,1000)
 
-
-# Definizione del modello di rete neurale
-model = Sequential()
-model.add(Dense(12, activation='relu'))
-model.add(Dense(8, activation='relu'))
-model.add(Dense(2, activation='sigmoid')) 
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', metrics.AUC(name='auc', curve='ROC', num_thresholds=1000)])  
-
 for i in range(NUM_TRIALS):
     print("ITERATION:" + str(i))
     np.random.seed(i)
@@ -164,6 +174,13 @@ for i in range(NUM_TRIALS):
     for train_index, test_index in cv.split(X,y):
 
         print("Fold:" + str(fold))
+
+        # Definizione del modello di rete neurale
+        model = Sequential()
+        model.add(Dense(12, activation='relu'))
+        model.add(Dense(8, activation='relu'))
+        model.add(Dense(2, activation='sigmoid')) 
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', metrics.AUC(name='auc', curve='ROC', num_thresholds=1000)])  
 
         train_ds = X.iloc[train_index]
         test_ds = X.iloc[test_index]
@@ -198,6 +215,11 @@ plt.savefig("ROCcurve_"+experiment_name+"_keras.png", dpi=600)
 plt.close()
 
 # Train final classifier final classifier
+model = Sequential()
+model.add(Dense(12, activation='relu'))
+model.add(Dense(8, activation='relu'))
+model.add(Dense(2, activation='sigmoid')) 
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy', metrics.AUC(name='auc', curve='ROC', num_thresholds=1000)])  
 y = to_categorical(y, num_classes=2)
 y_test_final = to_categorical(y_test_final, num_classes=2)
 model.fit(X,y,epochs=100, batch_size=10, validation_split=0, shuffle=False, verbose=0)
@@ -215,8 +237,3 @@ plt.title('Mean AUC=%0.3f' % mean_auc)
 plt.legend(['Mean ROC', 'Random Classifier'])
 plt.savefig("ROCcurve_"+experiment_name+"_keras_Final_Classifier.png", dpi=600)
 plt.close()
-
-
-
-
-
