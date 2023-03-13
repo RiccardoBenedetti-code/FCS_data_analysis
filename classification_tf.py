@@ -33,9 +33,9 @@ for i in range(len(patient_test_list)):
     patient_test = patient_test_list[i]
     patient_list = []
 
-    for i in list_datasets:
-        if patient_test in i:
-            patient_list.append(i)
+    for j in list_datasets:
+        if patient_test in j:
+            patient_list.append(j)
 
     print(patient_test)
 
@@ -56,7 +56,7 @@ for i in range(len(patient_test_list)):
     linfTtox = True
 
     if linfT:
-        experiment_name = "Lynfocytes_T"
+        experiment_name = "Lymphocytes_T"
         # Considero le righe di CD45 che sono compaiono anche in CD3
         df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
         df_CD3_from_CD45=df.loc[df._merge=='both',df.columns!='_merge']
@@ -78,7 +78,7 @@ for i in range(len(patient_test_list)):
 
         g = df_CD19_CD3_from_CD45.copy()
     if linfTtox:
-        experiment_name = "Lynfocytes_T_cytotox"
+        experiment_name = "Lymphocytes_T_cytotox"
         # Considero le righe di CD45 che sono compaiono anche in CD3
         df = CD45.drop_duplicates().merge(CD3.drop_duplicates(), on=CD3.columns.to_list(), how='left', indicator=True)
         df_CD3_from_CD45=df.loc[df._merge=='both',df.columns!='_merge']
