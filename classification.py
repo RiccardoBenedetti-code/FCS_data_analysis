@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os 
 from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_test_split, cross_validate
+from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_test_split, cross_validate, StratifiedKFold
 from sklearn.metrics import make_scorer, recall_score, roc_curve, auc, roc_auc_score
 from sklearn import tree
 import matplotlib.pyplot as plt
@@ -216,8 +216,8 @@ for i in range(NUM_TRIALS):
     print("ITERATION:"+str(i))
     np.random.seed(i)
     # Definisco il ciclo interno ed esterno della crossvalidazione annidata
-    inner_cv = KFold(n_splits=num_splits, shuffle=True, random_state=i)
-    outer_cv = KFold(n_splits=num_splits, shuffle=True, random_state=i)
+    inner_cv = StratifiedKFold(n_splits=num_splits, shuffle=True, random_state=i)
+    outer_cv = StratifiedKFold(n_splits=num_splits, shuffle=True, random_state=i)
 
     # ESECUZIONE DELLA CROSSVALIDAZIONE ANNIDATA
     # Il classificatore è una gridserch che crossvalida sul ciclo interno 

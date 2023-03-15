@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import os 
 from sklearn.svm import SVC
-from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_test_split, cross_validate
+from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_test_split, cross_validate, StratifiedKFold
 from sklearn.metrics import make_scorer, recall_score, roc_curve, auc, roc_auc_score
 from sklearn import tree
 import matplotlib.pyplot as plt
@@ -169,7 +169,7 @@ for i in range(NUM_TRIALS):
     print("ITERATION:" + str(i))
     np.random.seed(i)
     tf.random.set_seed(i)
-    cv = KFold(n_splits=num_splits, random_state=i, shuffle=True)
+    cv = StratifiedKFold(n_splits=num_splits, random_state=i, shuffle=True)
     fold = 0
     for train_index, test_index in cv.split(X,y):
 
