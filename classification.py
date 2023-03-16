@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.manifold import TSNE
 from xgboost import XGBClassifier
+import shap
 
 # Flags selection
 random_labels = False
@@ -51,8 +52,8 @@ for i in range(len(patient_test_list)):
     CD4 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD4_csv.csv", sep=";", decimal=",")
 
     linfT = False
-    linfB = False
-    linfTtox = True
+    linfB = True
+    linfTtox = False
 
     if linfT:
         experiment_name = "Lymphocytes_T"
@@ -322,6 +323,23 @@ if leave_30_out:
     plt.legend(loc="lower right")
     plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+"_final_classificator.png", dpi=600)
     plt.close()
+
+    explainer = shap.Explainer(best_model)
+    shap_values = explainer(X)
+    plt.figure()
+    shap.plots.beeswarm(shap_values, show=False)
+    plt.title("Shap Beeswarm "+experiment_name+" "+model_name)
+    plt.savefig("shap_beeswarm_"+experiment_name+"_"+model_name+".png", dpi=600)
+    plt.close()
+    plt.figure()
+    shap.plots.bar(shap_values, show=False)
+    plt.title("Shap Bar "+experiment_name+" "+model_name)
+    plt.savefig("shap_bar_"+experiment_name+"_"+model_name+".png", dpi=600)
+    plt.close()
+
+
+
+
 
 
 
