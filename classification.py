@@ -3,7 +3,7 @@ import numpy as np
 import os 
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, cross_val_score, KFold, train_test_split, cross_validate, StratifiedKFold
-from sklearn.metrics import make_scorer, recall_score, roc_curve, auc, roc_auc_score
+from sklearn.metrics import make_scorer, recall_score, roc_curve, auc, roc_auc_score, accuracy_score
 from sklearn import tree
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -19,8 +19,8 @@ leave_30_out = True
 
 # Model selection
 svm_model = False
-XGB_model = True
-tree_model = False
+XGB_model = False
+tree_model = True
 
 np.random.seed(1)
 list_datasets = os.listdir("DATASET_4_csv")
@@ -52,8 +52,8 @@ for i in range(len(patient_test_list)):
     CD4 = pd.read_csv("DATASET_4_csv/Gated "+patient_test+"_CD4_csv.csv", sep=";", decimal=",")
 
     linfT = False
-    linfB = True
-    linfTtox = False
+    linfB = False
+    linfTtox = True
 
     if linfT:
         experiment_name = "Lymphocytes_T"
@@ -289,6 +289,14 @@ for i in range(NUM_TRIALS):
     plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+".png", dpi=600)
     plt.close()
 
+train_accuracy_global_mean = np.mean(bal_acc_train_scores)
+train_accuracy_global_std = np.std(bal_acc_train_scores)
+test_accuracy_global_mean = np.mean(bal_acc_test_scores)
+test_accuracy_global_std = np.std(bal_acc_test_scores)
+
+print("Train accuracy mean: " + str(train_accuracy_global_mean) + " std: " + str(train_accuracy_global_std))
+print("Test accuracy mean: " + str(test_accuracy_global_mean) + " std: " + str(test_accuracy_global_std))
+
 # FINAL MODEL
 print("Training final classifier...")
 # Definisco la gridsearch per il modello finale, prendo gli stessi parametri del loop interno della crossvalidazione annidata
@@ -302,6 +310,9 @@ print(best_model)
 if leave_30_out:
     # Eseguo la predizione sui dati tenuti fuori prima della crossvalidazione annidata
     y_final_pred_labels = best_model.predict(X_test_final)
+    # Calcolo l'accuracy
+    final_model_accuracy = accuracy_score(y_test_final, y_final_pred_labels)
+    print("Final estimator accuracy: " + str(final_model_accuracy))
     # Calcolo false positive rate e true positive rate per la roc dando come argomento le label vere e quelle predette dal modello appena trainato
     fpr, tpr, thresholds = roc_curve(y_test_final, y_final_pred_labels)
     # Calcoli per il plotting della roc
@@ -326,16 +337,29 @@ if leave_30_out:
 
     explainer = shap.Explainer(best_model)
     shap_values = explainer(X)
-    plt.figure()
-    shap.plots.beeswarm(shap_values, show=False)
-    plt.title("Shap Beeswarm "+experiment_name+" "+model_name)
-    plt.savefig("shap_beeswarm_"+experiment_name+"_"+model_name+".png", dpi=600)
-    plt.close()
-    plt.figure()
-    shap.plots.bar(shap_values, show=False)
-    plt.title("Shap Bar "+experiment_name+" "+model_name)
-    plt.savefig("shap_bar_"+experiment_name+"_"+model_name+".png", dpi=600)
-    plt.close()
+    if model_name == "XGB":
+        plt.figure()
+        shap.plots.beeswarm(shap_values, show=False)
+        plt.title("Shap Beeswarm "+experiment_name+" "+model_name)
+        plt.savefig("shap_beeswarm_"+experiment_name+"_"+model_name+".png", dpi=600)
+        plt.close()
+        plt.figure()
+        shap.plots.bar(shap_values, show=False)
+        plt.title("Shap Bar "+experiment_name+" "+model_name)
+        plt.savefig("shap_bar_"+experiment_name+"_"+model_name+".png", dpi=600)
+        plt.close()
+    else:
+        plt.figure()
+        shap.plots.beeswarm(shap_values[:,:,1], show=False)
+        plt.title("Shap Beeswarm "+experiment_name+" "+model_name)
+        plt.savefig("shap_beeswarm_"+experiment_name+"_"+model_name+".png", dpi=600)
+        plt.close()
+        plt.figure()
+        shap.plots.bar(shap_values[:,:,1], show=False)
+        plt.title("Shap Bar "+experiment_name+" "+model_name)
+        plt.savefig("shap_bar_"+experiment_name+"_"+model_name+".png", dpi=600)
+        plt.close()
+
 
 
 
