@@ -10,12 +10,13 @@ import seaborn as sns
 from sklearn.manifold import TSNE
 from xgboost import XGBClassifier
 import shap
+import pickle
 
 # Flags selection
 random_labels = False
 select_subset = True
-tsne_generator = True
-leave_30_out = True
+tsne_generator = False
+leave_30_out = False
 
 # Model selection
 svm_model = False
@@ -127,6 +128,9 @@ print("label 1:"+str(len(data_final[data_final['label']==1])))
 X = data_final.loc[ : , data_final.columns != 'label']
 y = data_final['label']
 X = X.drop(["Time"], axis=1)
+
+pickle.dump(X,open("X_dataset_" + experiment_name + ".pkl", 'wb'))
+pickle.dump(y,open("y_dataset_" + experiment_name + ".pkl", 'wb'))
 
 # Seleziono un subset per le prove esplorative in modo da avere tempi di esecuzione ridotti
 if select_subset:
@@ -293,7 +297,9 @@ train_accuracy_global_mean = np.mean(bal_acc_train_scores)
 train_accuracy_global_std = np.std(bal_acc_train_scores)
 test_accuracy_global_mean = np.mean(bal_acc_test_scores)
 test_accuracy_global_std = np.std(bal_acc_test_scores)
+roc_auc_global_test_std = np.std(roc_auc_test_scores)
 
+print("Test ROC AUC mean: " + str(mean_auc) + " std: " + str(roc_auc_global_test_std))
 print("Train accuracy mean: " + str(train_accuracy_global_mean) + " std: " + str(train_accuracy_global_std))
 print("Test accuracy mean: " + str(test_accuracy_global_mean) + " std: " + str(test_accuracy_global_std))
 
@@ -307,6 +313,8 @@ clf_final.fit(X,y)
 best_model = clf_final.best_estimator_
 print("Best final estimator:")
 print(best_model)
+# Exporting best final model with pickle
+pickle.dump(best_model, open("Model_"+model_name+"_"+experiment_name+".pkl",'wb'))
 if leave_30_out:
     # Eseguo la predizione sui dati tenuti fuori prima della crossvalidazione annidata
     y_final_pred_labels = best_model.predict(X_test_final)
@@ -335,7 +343,11 @@ if leave_30_out:
     plt.savefig("ROCcurve_"+experiment_name+"_"+model_name+"_final_classificator.png", dpi=600)
     plt.close()
 
-    explainer = shap.Explainer(best_model)
+    if model_name == "SVM":
+        masker = shap.maskers.Independent(X, 10)
+        explainer = shap.KernelExplainer(best_model.predict ,masker.data)
+    else:
+        explainer = shap.Explainer(best_model)
     shap_values = explainer(X)
     if model_name == "XGB":
         plt.figure()
